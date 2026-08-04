@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FairEscrow — AI-Arbitrated Freelance Escrow</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+:root{--ink:#14171f;--ink-soft:#1d212c;--parchment:#f7f3ea;--parchment-dim:#ece5d3;--text-on-ink:#f4f1e8;--text-on-parchment:#1c1a15;--muted:#6b6455;--seal:#c9a227;--green:#2f6b4f;--green-bg:#e4efe8;--red:#8c3b2e;--red-bg:#f3e4e0;--amber:#a4711f;--amber-bg:#f5e9d3;--purple:#5b4b8a;--purple-bg:#e9e4f4;--blue:#2f5b8a;--blue-bg:#e2eaf3;--serif:"Source Serif 4",Georgia,serif;--sans:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--ink);color:var(--text-on-ink);font-family:var(--sans);min-height:100vh;}
+.header{background:var(--ink-soft);border-bottom:1px solid #2a2f3c;}
+.header-inner{max-width:760px;margin:0 auto;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{color:var(--seal);font-size:20px;}
+.brand-name{font-family:var(--serif);font-weight:700;font-size:21px;}
+.wallet{display:flex;align-items:center;gap:12px;}
+.addr{font-family:var(--mono);font-size:13px;color:#b9c0d1;background:#262b38;padding:6px 10px;border-radius:6px;}
+.btn{font-family:var(--sans);font-weight:500;font-size:14px;padding:10px 18px;border-radius:6px;border:none;cursor:pointer;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-primary{background:var(--seal);color:#1c1608;}
+.btn-secondary{background:#262b38;color:var(--text-on-ink);border:1px solid #3a4152;}
+.btn-ghost{background:transparent;color:#9ba3b4;border:1px solid #3a4152;}
+.main{max-width:760px;margin:0 auto;padding:32px 24px 60px;}
+.status-banner{border-radius:8px;padding:16px 20px;font-family:var(--serif);font-size:16px;font-weight:600;margin-bottom:24px;text-align:center;}
+.badge-blue{background:var(--blue-bg);color:var(--blue);} .badge-amber{background:var(--amber-bg);color:var(--amber);} .badge-green{background:var(--green-bg);color:var(--green);} .badge-red{background:var(--red-bg);color:var(--red);} .badge-purple{background:var(--purple-bg);color:var(--purple);} .badge{background:#262b38;color:#9ba3b4;}
+.tabs{display:flex;gap:4px;border-bottom:1px solid #2a2f3c;overflow-x:auto;}
+.tab{background:none;border:none;color:#8b93a5;font-family:var(--sans);font-size:14px;font-weight:500;padding:12px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab-active{color:var(--text-on-ink);border-bottom-color:var(--seal);}
+.panel{background:var(--parchment);color:var(--text-on-parchment);border-radius:0 0 10px 10px;padding:28px;box-shadow:0 12px 32px rgba(0,0,0,.25);}
+.panel h2{font-family:var(--serif);font-size:22px;margin:0 0 10px;}
+.muted{color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:20px;}
+.field-row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--parchment-dim);gap:16px;}
+.field-label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}
+.field-value{font-family:var(--mono);font-size:13px;text-align:right;word-break:break-all;}
+.input{width:100%;font-family:var(--mono);font-size:14px;padding:12px 14px;border:1px solid #d4cbb0;border-radius:6px;background:#fff;margin-bottom:14px;}
+.hint{font-size:13px;color:var(--muted);margin-top:12px;}
+.verdict-box{margin-top:24px;border:1px solid #d4cbb0;border-radius:8px;padding:20px;background:#fffdf7;position:relative;}
+.verdict-box::before{content:"◆";position:absolute;top:-12px;left:20px;background:var(--seal);color:#1c1608;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.verdict-label{font-family:var(--serif);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--seal);margin-bottom:8px;}
+.verdict-text{font-size:15px;line-height:1.6;font-style:italic;}
+.alert{border-radius:6px;padding:12px 16px;font-size:13px;margin-bottom:16px;}
+.alert-error{background:var(--red-bg);color:var(--red);}
+.footer{text-align:center;color:#5a6274;font-size:12px;padding:24px;}
+.config-banner{background:#3a2f1a;color:#e8cf8a;font-size:12px;padding:10px 24px;text-align:center;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { createClient, createAccount as createGenLayerAccount, generatePrivateKey } from "https://esm.sh/genlayer-js@0.8.0";
+import { studionet } from "https://esm.sh/genlayer-js@0.8.0/chains";
+
+// ====== CONFIGURE THIS ======
+const CONTRACT_ADDRESS = "0x51bEE7797DF86D827c426e65B52f8f74531FC25D";
+const STUDIO_URL = "https://studio.genlayer.com/api";
+// =============================
+
+const STORAGE_KEY = "fairescrow_privkey";
+
+function getStoredAccount() {
+  const pk = localStorage.getItem(STORAGE_KEY);
+  return pk ? createGenLayerAccount(pk) : null;
+}
+function createNewAccount() {
+  const pk = generatePrivateKey();
+  localStorage.setItem(STORAGE_KEY, pk);
+  return createGenLayerAccount(pk);
+}
+function clearAccount() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+class FairEscrowContract {
+  constructor(account) {
+    this.client = createClient({
+      chain: studionet,
+      ...(account ? { account } : {}),
+      ...(STUDIO_URL ? { endpoint: STUDIO_URL } : {}),
+    });
+  }
+  updateAccount(account) {
+    this.client = createClient({
+      chain: studionet,
+      account,
+      ...(STUDIO_URL ? { endpoint: STUDIO_URL } : {}),
+    });
+  }
+  async getStatus() {
+    return await this.client.readContract({ address: CONTRACT_ADDRESS, functionName: "get_status", args: [] });
+  }
+  async getDeliverable() {
+    return await this.client.readContract({ address: CONTRACT_ADDRESS, functionName: "get_deliverable", args: [] });
+  }
+  async getVerdict() {
+    return await this.client.readContract({ address: CONTRACT_ADDRESS, functionName: "get_verdict", args: [] });
+  }
+  async submitWork(url) {
+    const hash = await this.client.writeContract({ address: CONTRACT_ADDRESS, functionName: "submit_work", args: [url] });
+    return await this.client.waitForTransactionReceipt({ hash, status: "ACCEPTED", interval: 5000, retries: 60 });
+  }
+  async resolve() {
+    const hash = await this.client.writeContract({ address: CONTRACT_ADDRESS, functionName: "resolve", args: [] });
+    return await this.client.waitForTransactionReceipt({ hash, status: "ACCEPTED", interval: 5000, retries: 120 });
+  }
+}
+
+let account = getStoredAccount();
+let contract = new FairEscrowContract(account);
+let state = { status: null, deliverable: "", verdict: "", loading: false, error: "", tab: "details" };
+
+const app = document.getElementById("app");
+const shortAddr = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
+const badgeClass = (s) => ({ open: "badge-blue", submitted: "badge-amber", released: "badge-green", refunded: "badge-red", disputed: "badge-purple" }[s] || "badge");
+const statusLabel = (s) => ({
+  open: "Open — waiting for freelancer to submit work",
+  submitted: "Submitted — ready for resolution",
+  released: "Resolved — payment released to freelancer",
+  refunded: "Resolved — payment refunded to client",
+  disputed: "Resolved — payment split (partial release)",
+}[s] || "Loading…");
+
+async function refresh() {
+  try {
+    state.status = await contract.getStatus();
+    state.deliverable = await contract.getDeliverable();
+    state.verdict = await contract.getVerdict();
+    state.error = "";
+  } catch (e) {
+    state.error = "Could not load contract state — check CONTRACT_ADDRESS at the top of this file. " + e.message;
+  }
+  render();
+}
+
+function connectWallet() { account = createNewAccount(); contract.updateAccount(account); render(); }
+function disconnectWallet() { clearAccount(); account = null; contract.updateAccount(null); render(); }
+
+async function handleSubmitWork(url) {
+  state.loading = true; state.error = ""; render();
+  try { await contract.submitWork(url); await refresh(); }
+  catch (e) { state.error = "Submit failed: " + e.message; }
+  state.loading = false; render();
+}
+async function handleResolve() {
+  state.loading = true; state.error = ""; render();
+  try { await contract.resolve(); await refresh(); }
+  catch (e) { state.error = "Resolve failed (validators may have disagreed — try again): " + e.message; }
+  state.loading = false; render();
+}
+
+function renderTab() {
+  if (state.tab === "details") {
+    return `<h2>Job Overview</h2>
+      <p class="muted">This escrow was created and funded on deploy. The client's requirements are stored immutably on-chain as the "brief" — this is what the AI validators compare the freelancer's work against.</p>
+      <div class="field-row"><span class="field-label">Contract status</span><span class="field-value">${state.status ?? "…"}</span></div>
+      <div class="field-row"><span class="field-label">Submitted deliverable</span><span class="field-value">${state.deliverable || "— nothing submitted yet —"}</span></div>
+      <button id="refresh-btn" class="btn btn-secondary">Refresh</button>`;
+  }
+  if (state.tab === "submit") {
+    return `<h2>Submit Work</h2>
+      <p class="muted">Freelancer only. Paste a public URL to your deliverable — the validators will fetch and read its actual content, not just the link.</p>
+      <input id="deliverable-input" class="input" type="url" placeholder="https://..." />
+      <button id="submit-btn" class="btn btn-primary" ${state.loading ? "disabled" : ""}>${state.loading ? "Submitting…" : "Submit Work"}</button>
+      ${!account ? `<p class="hint">Connect a wallet first.</p>` : ""}`;
+  }
+  if (state.tab === "resolve") {
+    return `<h2>Resolve & Verdict</h2>
+      <p class="muted">Either party can trigger resolution once work is submitted. AI validators fetch the deliverable, compare it against the brief, and reach consensus on a fair outcome.</p>
+      <button id="resolve-btn" class="btn btn-primary" ${state.loading ? "disabled" : ""}>${state.loading ? "Resolving (consensus in progress)…" : "Resolve"}</button>
+      ${state.verdict ? `<div class="verdict-box"><div class="verdict-label">AI Reasoning</div><div class="verdict-text">${state.verdict}</div></div>` : `<p class="hint">No verdict yet.</p>`}`;
+  }
+}
+
+function render() {
+  app.innerHTML = `
+    ${CONTRACT_ADDRESS.includes("PASTE_YOUR") ? `<div class="config-banner">⚠ Set CONTRACT_ADDRESS at the top of this HTML file before using.</div>` : ""}
+    <header class="header"><div class="header-inner">
+      <div class="brand"><span class="brand-mark">◆</span><span class="brand-name">FairEscrow</span></div>
+      <div class="wallet">${account ? `<span class="addr">${shortAddr(account.address)}</span><button id="disconnect-btn" class="btn btn-ghost">Disconnect</button>` : `<button id="connect-btn" class="btn btn-primary">Connect Wallet</button>`}</div>
+    </div></header>
+    <main class="main">
+      <div class="status-banner ${badgeClass(state.status)}">${statusLabel(state.status)}</div>
+      <nav class="tabs">
+        <button data-tab="details" class="tab ${state.tab === "details" ? "tab-active" : ""}">Job Details</button>
+        <button data-tab="submit" class="tab ${state.tab === "submit" ? "tab-active" : ""}">Submit Work</button>
+        <button data-tab="resolve" class="tab ${state.tab === "resolve" ? "tab-active" : ""}">Resolve & Verdict</button>
+      </nav>
+      ${state.error ? `<div class="alert alert-error">${state.error}</div>` : ""}
+      <section class="panel">${renderTab()}</section>
+    </main>
+    <footer class="footer">Built on <strong>GenLayer</strong> — payments settled by AI validator consensus, not a middleman.</footer>
+  `;
+  document.getElementById("connect-btn")?.addEventListener("click", connectWallet);
+  document.getElementById("disconnect-btn")?.addEventListener("click", disconnectWallet);
+  document.getElementById("refresh-btn")?.addEventListener("click", refresh);
+  document.getElementById("resolve-btn")?.addEventListener("click", handleResolve);
+  document.getElementById("submit-btn")?.addEventListener("click", () => {
+    const url = document.getElementById("deliverable-input").value.trim();
+    if (url) handleSubmitWork(url);
+  });
+  document.querySelectorAll(".tab").forEach((el) => el.addEventListener("click", () => { state.tab = el.dataset.tab; render(); }));
+}
+
+render();
+refresh();
+</script>
+</body>
+</html>
