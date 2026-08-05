@@ -49,8 +49,36 @@ body{margin:0;background:var(--ink);color:var(--text-on-ink);font-family:var(--s
 <div id="app"></div>
 
 <script type="module">
-import { createClient, createAccount as createGenLayerAccount, generatePrivateKey } from "https://esm.sh/genlayer-js@0.8.0";
-import { studionet } from "https://esm.sh/genlayer-js@0.8.0/chains";
+const app = document.getElementById("app");
+
+function showFatalError(title, err) {
+  app.innerHTML = `
+    <div style="max-width:640px;margin:60px auto;padding:24px;background:#2a1616;border:1px solid #5c2b2b;border-radius:8px;color:#f4c9c9;font-family:monospace;font-size:13px;line-height:1.6;">
+      <div style="font-weight:bold;font-size:15px;margin-bottom:10px;">${title}</div>
+      <div style="white-space:pre-wrap;word-break:break-word;">${(err && (err.stack || err.message || err)) || "Unknown error"}</div>
+    </div>
+  `;
+}
+
+let createClient, createGenLayerAccount, generatePrivateKey, studionet;
+
+try {
+  const core = await import("https://esm.sh/genlayer-js@0.8.0");
+  createClient = core.createClient;
+  createGenLayerAccount = core.createAccount;
+  generatePrivateKey = core.generatePrivateKey;
+} catch (err) {
+  showFatalError("Failed to load genlayer-js core module from esm.sh", err);
+  throw err;
+}
+
+try {
+  const chains = await import("https://esm.sh/genlayer-js@0.8.0/chains");
+  studionet = chains.studionet;
+} catch (err) {
+  showFatalError("Failed to load genlayer-js/chains module from esm.sh", err);
+  throw err;
+}
 
 // ====== CONFIGURE THIS ======
 const CONTRACT_ADDRESS = "0x51bEE7797DF86D827c426e65B52f8f74531FC25D";
@@ -110,7 +138,6 @@ let account = getStoredAccount();
 let contract = new FairEscrowContract(account);
 let state = { status: null, deliverable: "", verdict: "", loading: false, error: "", tab: "details" };
 
-const app = document.getElementById("app");
 const shortAddr = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
 const badgeClass = (s) => ({ open: "badge-blue", submitted: "badge-amber", released: "badge-green", refunded: "badge-red", disputed: "badge-purple" }[s] || "badge");
 const statusLabel = (s) => ({
@@ -202,8 +229,12 @@ function render() {
   document.querySelectorAll(".tab").forEach((el) => el.addEventListener("click", () => { state.tab = el.dataset.tab; render(); }));
 }
 
-render();
-refresh();
+try {
+  render();
+  refresh();
+} catch (err) {
+  showFatalError("App failed to start", err);
+}
 </script>
 </body>
 </html>
