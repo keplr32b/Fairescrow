@@ -81,7 +81,7 @@ try {
 }
 
 // ====== CONFIGURE THIS ======
-const CONTRACT_ADDRESS = "0x51bEE7797DF86D827c426e65B52f8f74531FC25D";
+const CONTRACT_ADDRESS = "0x363d3204C829DaE178e2455f25b5A70588e84B25";
 // Not overriding the endpoint — studionet's built-in config should already
 // point at the correct hosted Studio API. If you deployed on a *local*
 // Studio instance instead of studio.genlayer.com, set this and pass it below.
@@ -207,7 +207,7 @@ function render() {
     ${CONTRACT_ADDRESS.includes("PASTE_YOUR") ? `<div class="config-banner">⚠ Set CONTRACT_ADDRESS at the top of this HTML file before using.</div>` : ""}
     <header class="header"><div class="header-inner">
       <div class="brand"><span class="brand-mark">◆</span><span class="brand-name">FairEscrow</span></div>
-      <div class="wallet">${account ? `<span class="addr">${shortAddr(account.address)}</span><button id="disconnect-btn" class="btn btn-ghost">Disconnect</button>` : `<button id="connect-btn" class="btn btn-primary">Connect Wallet</button>`}</div>
+      <div class="wallet">${account ? `<span class="addr">${shortAddr(account.address)}</span><button id="copy-addr-btn" class="btn btn-ghost">Copy Full Address</button><button id="disconnect-btn" class="btn btn-ghost">Disconnect</button>` : `<button id="connect-btn" class="btn btn-primary">Connect Wallet</button>`}</div>
     </div></header>
     <main class="main">
       <div class="status-banner ${badgeClass(state.status)}">${statusLabel(state.status)}</div>
@@ -222,6 +222,11 @@ function render() {
     <footer class="footer">Built on <strong>GenLayer</strong> — payments settled by AI validator consensus, not a middleman.</footer>
   `;
   document.getElementById("connect-btn")?.addEventListener("click", connectWallet);
+  document.getElementById("copy-addr-btn")?.addEventListener("click", () => {
+    if (account?.address) {
+      navigator.clipboard.writeText(account.address).then(() => alert("Copied: " + account.address));
+    }
+  });
   document.getElementById("disconnect-btn")?.addEventListener("click", disconnectWallet);
   document.getElementById("refresh-btn")?.addEventListener("click", refresh);
   document.getElementById("resolve-btn")?.addEventListener("click", handleResolve);
