@@ -207,7 +207,7 @@ function render() {
     ${CONTRACT_ADDRESS.includes("PASTE_YOUR") ? `<div class="config-banner">⚠ Set CONTRACT_ADDRESS at the top of this HTML file before using.</div>` : ""}
     <header class="header"><div class="header-inner">
       <div class="brand"><span class="brand-mark">◆</span><span class="brand-name">FairEscrow</span></div>
-      <div class="wallet">${account ? `<span class="addr" id="addr-badge" style="cursor:pointer;">${shortAddr(account.address)}</span><button id="disconnect-btn" class="btn btn-ghost">Disconnect</button>` : `<button id="connect-btn" class="btn btn-primary">Connect Wallet</button>`}</div>
+      <div class="wallet">${account ? `<div style="text-align:right;"><span class="addr">${shortAddr(account.address)}</span> <button id="disconnect-btn" class="btn btn-ghost">Disconnect</button><div style="font-family:var(--mono);font-size:10px;color:#8b93a5;margin-top:6px;word-break:break-all;max-width:220px;">${account.address}</div></div>` : `<button id="connect-btn" class="btn btn-primary">Connect Wallet</button>`}</div>
     </div></header>
     <main class="main">
       <div class="status-banner ${badgeClass(state.status)}">${statusLabel(state.status)}</div>
