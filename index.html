@@ -39,7 +39,7 @@ body{margin:0;background:var(--ink);color:var(--text-on-ink);font-family:var(--s
 .verdict-box::before{content:"◆";position:absolute;top:-12px;left:20px;background:var(--seal);color:#1c1608;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;}
 .verdict-label{font-family:var(--serif);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--seal);margin-bottom:8px;}
 .verdict-text{font-size:15px;line-height:1.6;font-style:italic;}
-.alert{border-radius:6px;padding:12px 16px;font-size:13px;margin-bottom:16px;}
+.alert{border-radius:6px;padding:12px 16px;font-size:12px;margin-bottom:16px;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);line-height:1.5;}
 .alert-error{background:var(--red-bg);color:var(--red);}
 .footer{text-align:center;color:#5a6274;font-size:12px;padding:24px;}
 .config-banner{background:#3a2f1a;color:#e8cf8a;font-size:12px;padding:10px 24px;text-align:center;}
@@ -63,7 +63,7 @@ function showFatalError(title, err) {
 let createClient, createGenLayerAccount, generatePrivateKey, studionet;
 
 try {
-  const core = await import("https://esm.sh/genlayer-js@0.8.0");
+  const core = await import("https://esm.sh/genlayer-js");
   createClient = core.createClient;
   createGenLayerAccount = core.createAccount;
   generatePrivateKey = core.generatePrivateKey;
@@ -73,7 +73,7 @@ try {
 }
 
 try {
-  const chains = await import("https://esm.sh/genlayer-js@0.8.0/chains");
+  const chains = await import("https://esm.sh/genlayer-js/chains");
   studionet = chains.studionet;
 } catch (err) {
   showFatalError("Failed to load genlayer-js/chains module from esm.sh", err);
@@ -82,7 +82,10 @@ try {
 
 // ====== CONFIGURE THIS ======
 const CONTRACT_ADDRESS = "0x51bEE7797DF86D827c426e65B52f8f74531FC25D";
-const STUDIO_URL = "https://studio.genlayer.com/api";
+// Not overriding the endpoint — studionet's built-in config should already
+// point at the correct hosted Studio API. If you deployed on a *local*
+// Studio instance instead of studio.genlayer.com, set this and pass it below.
+const STUDIO_URL = null;
 // =============================
 
 const STORAGE_KEY = "fairescrow_privkey";
@@ -155,7 +158,7 @@ async function refresh() {
     state.verdict = await contract.getVerdict();
     state.error = "";
   } catch (e) {
-    state.error = "Could not load contract state — check CONTRACT_ADDRESS at the top of this file. " + e.message;
+    state.error = "Could not load contract state.\n\nError: " + (e.name || "") + " " + (e.message || String(e)) + (e.stack ? ("\n\n" + e.stack.slice(0, 500)) : "");
   }
   render();
 }
