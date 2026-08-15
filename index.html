@@ -81,7 +81,7 @@ try {
 }
 
 // ====== CONFIGURE THIS ======
-const CONTRACT_ADDRESS = "0xD02dAe2ffd1226Ff2837ecc14e8caf875Cf5B03b";
+const CONTRACT_ADDRESS = "0x73E143b09D99772590721c03bB1dA9B269C39321";
 // Not overriding the endpoint — studionet's built-in config should already
 // point at the correct hosted Studio API. If you deployed on a *local*
 // Studio instance instead of studio.genlayer.com, set this and pass it below.
@@ -127,6 +127,16 @@ class FairEscrowContract {
   async getVerdict() {
     return await this.client.readContract({ address: CONTRACT_ADDRESS, functionName: "get_verdict", args: [] });
   }
+  async getAmount() {
+    return await this.client.readContract({ address: CONTRACT_ADDRESS, functionName: "get_amount", args: [] });
+  }
+  async getBalance() {
+    return await this.client.readContract({ address: CONTRACT_ADDRESS, functionName: "get_balance", args: [] });
+  }
+  async fundEscrow(valueRaw) {
+    const hash = await this.client.writeContract({ address: CONTRACT_ADDRESS, functionName: "fund_escrow", args: [], value: valueRaw });
+    return await this.client.waitForTransactionReceipt({ hash, status: "ACCEPTED", interval: 5000, retries: 60 });
+  }
   async submitWork(url) {
     const hash = await this.client.writeContract({ address: CONTRACT_ADDRESS, functionName: "submit_work", args: [url] });
     return await this.client.waitForTransactionReceipt({ hash, status: "ACCEPTED", interval: 5000, retries: 60 });
@@ -139,12 +149,13 @@ class FairEscrowContract {
 
 let account = getStoredAccount();
 let contract = new FairEscrowContract(account);
-let state = { status: null, deliverable: "", verdict: "", loading: false, error: "", tab: "details" };
+let state = { status: null, deliverable: "", verdict: "", amount: null, balance: null, loading: false, error: "", tab: "details" };
 
 const shortAddr = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
-const badgeClass = (s) => ({ open: "badge-blue", submitted: "badge-amber", released: "badge-green", refunded: "badge-red", disputed: "badge-purple" }[s] || "badge");
+const badgeClass = (s) => ({ awaiting_funding: "badge", open: "badge-blue", submitted: "badge-amber", released: "badge-green", refunded: "badge-red", disputed: "badge-purple" }[s] || "badge");
 const statusLabel = (s) => ({
-  open: "Open — waiting for freelancer to submit work",
+  awaiting_funding: "Awaiting funding — client must deposit the escrow amount",
+  open: "Funded & open — waiting for freelancer to submit work",
   submitted: "Submitted — ready for resolution",
   released: "Resolved — payment released to freelancer",
   refunded: "Resolved — payment refunded to client",
@@ -156,6 +167,8 @@ async function refresh() {
     state.status = await contract.getStatus();
     state.deliverable = await contract.getDeliverable();
     state.verdict = await contract.getVerdict();
+    state.amount = await contract.getAmount();
+    state.balance = await contract.getBalance();
     state.error = "";
   } catch (e) {
     state.error = "Could not load contract state.\n\nError: " + (e.name || "") + " " + (e.message || String(e)) + (e.stack ? ("\n\n" + e.stack.slice(0, 500)) : "");
@@ -166,6 +179,12 @@ async function refresh() {
 function connectWallet() { account = createNewAccount(); contract.updateAccount(account); render(); }
 function disconnectWallet() { clearAccount(); account = null; contract.updateAccount(null); render(); }
 
+async function handleFundEscrow() {
+  state.loading = true; state.error = ""; render();
+  try { await contract.fundEscrow(state.amount); await refresh(); }
+  catch (e) { state.error = "Funding failed: " + e.message; }
+  state.loading = false; render();
+}
 async function handleSubmitWork(url) {
   state.loading = true; state.error = ""; render();
   try { await contract.submitWork(url); await refresh(); }
@@ -182,9 +201,17 @@ async function handleResolve() {
 function renderTab() {
   if (state.tab === "details") {
     return `<h2>Job Overview</h2>
-      <p class="muted">This escrow was created and funded on deploy. The client's requirements are stored immutably on-chain as the "brief" — this is what the AI validators compare the freelancer's work against.</p>
+      <p class="muted">This escrow holds real GEN in custody. The client deposits the agreed amount before work can begin, and the contract releases, refunds, or splits it automatically based on the AI's verdict — no manual payout step.</p>
       <div class="field-row"><span class="field-label">Contract status</span><span class="field-value">${state.status ?? "…"}</span></div>
+      <div class="field-row"><span class="field-label">Agreed amount</span><span class="field-value">${state.amount ?? "…"}</span></div>
+      <div class="field-row"><span class="field-label">Escrow balance</span><span class="field-value">${state.balance ?? "…"}</span></div>
       <div class="field-row"><span class="field-label">Submitted deliverable</span><span class="field-value">${state.deliverable || "— nothing submitted yet —"}</span></div>
+      ${
+        state.status === "awaiting_funding"
+          ? `<button id="fund-btn" class="btn btn-primary" ${state.loading ? "disabled" : ""}>${state.loading ? "Funding…" : "Fund Escrow"}</button>
+             <p class="hint">Client only. Deposits the full agreed amount into contract custody.</p>`
+          : ""
+      }
       <button id="refresh-btn" class="btn btn-secondary">Refresh</button>`;
   }
   if (state.tab === "submit") {
@@ -229,6 +256,7 @@ function render() {
   });
   document.getElementById("disconnect-btn")?.addEventListener("click", disconnectWallet);
   document.getElementById("refresh-btn")?.addEventListener("click", refresh);
+  document.getElementById("fund-btn")?.addEventListener("click", handleFundEscrow);
   document.getElementById("resolve-btn")?.addEventListener("click", handleResolve);
   document.getElementById("submit-btn")?.addEventListener("click", () => {
     const url = document.getElementById("deliverable-input").value.trim();
