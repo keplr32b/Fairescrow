@@ -7,8 +7,8 @@ class FreelanceEscrow(gl.Contract):
     client: Address
     freelancer: Address
     brief: str
-    amount: u256
-    status: str
+    amount: u256              # expected escrow amount, in wei-equivalent base units
+    status: str                # "awaiting_funding" | "open" | "submitted" | "released" | "refunded" | "disputed"
     deliverable_url: str
     verdict_reasoning: str
 
@@ -17,14 +17,22 @@ class FreelanceEscrow(gl.Contract):
         self.freelancer = Address(freelancer)
         self.brief = brief
         self.amount = u256(amount)
-        self.status = "open"
+        self.status = "awaiting_funding"
         self.deliverable_url = ""
         self.verdict_reasoning = ""
+
+    @gl.public.write.payable
+    def fund_escrow(self) -> None:
+        # Only the client can fund, and only once, before work is open for submission.
+        assert gl.message.sender_address == self.client, "Only client can fund escrow"
+        assert self.status == "awaiting_funding", "Escrow already funded"
+        assert gl.message.value == self.amount, "Funded value must exactly match agreed amount"
+        self.status = "open"
 
     @gl.public.write
     def submit_work(self, deliverable_url: str) -> None:
         assert gl.message.sender_address == self.freelancer, "Only freelancer can submit work"
-        assert self.status == "open", "Contract not open for submission"
+        assert self.status == "open", "Contract not open for submission (must be funded first)"
         self.deliverable_url = deliverable_url
         self.status = "submitted"
 
@@ -33,6 +41,7 @@ class FreelanceEscrow(gl.Contract):
         sender = gl.message.sender_address
         assert sender == self.client or sender == self.freelancer, "Not authorized"
         assert self.status == "submitted", "No submitted work to resolve"
+        assert self.balance >= self.amount, "Escrow balance does not cover agreed amount"
 
         brief = self.brief
         deliverable_url = self.deliverable_url
@@ -86,13 +95,21 @@ class FreelanceEscrow(gl.Contract):
         assert 0 <= pct <= 100
 
         self.verdict_reasoning = result["reasoning"]
+
+        freelancer_share = (self.amount * u256(pct)) // u256(100)
+        client_share = self.amount - freelancer_share
+
+        if freelancer_share > u256(0):
+            gl.get_contract_at(self.freelancer).emit_transfer(value=freelancer_share)
+        if client_share > u256(0):
+            gl.get_contract_at(self.client).emit_transfer(value=client_share)
+
         if pct == 100:
             self.status = "released"
         elif pct == 0:
             self.status = "refunded"
         else:
             self.status = "disputed"
-        # In production: trigger actual GEN/token transfer here, split by pct/100.
 
     @gl.public.view
     def get_status(self) -> str:
@@ -105,3 +122,11 @@ class FreelanceEscrow(gl.Contract):
     @gl.public.view
     def get_deliverable(self) -> str:
         return self.deliverable_url
+
+    @gl.public.view
+    def get_amount(self) -> u256:
+        return self.amount
+
+    @gl.public.view
+    def get_balance(self) -> u256:
+        return self.balance
