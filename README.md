@@ -8,9 +8,9 @@ original brief, and reach decentralized consensus on a fair outcome —
 release, refund, or a partial split — with real GEN held in on-chain
 custody and released automatically, no manual payout step.
 
-** Live contract (GenLayer Studio):** '0xF25847399017C2e3bE0278dd29E55bE947989b90'
+**Live contract (GenLayer Studio):** `0xF25847399017C2e3bE0278dd29E55bE947989b90`
 
-** Authorized participant accounts used in the live demo:**
+**Authorized participant accounts used in the live demo:**
 - **Client:** `0xCa44BB8223A7d15e1B3777Bac319f03f9aEC9D91`
 - **Freelancer:** `0xab39292830d54A3d1B26E81bA3A06eA0ea0c1F14`
 
