@@ -27,10 +27,18 @@ How it works
 5. Settle — based on the agreed release_percent, the contract calls gl.get_contract_at(...).emit_transfer(...) to actually pay the freelancer and/or refund the client, in the same transaction. The verdict's reasoning is stored on-chain, fully transparent to both parties.
 
 Why this needs GenLayer
+
 A traditional smart contract can check "did X wei move from A to B." It cannot check "does this deliverable meet the brief." That requires judgment,live web access, and a way for decentralized validators to agree on something subjective — which is exactly what GenLayer's Intelligent Contracts add on
 top of a normal EVM-style chain, while still handling the actual value transfer deterministically in code.
 
-Project structure Code
+## Project structure Code
+
+```
+fairescrow/
+├── contracts/
+│   └── freelance_escrow.py     # the Intelligent Contract (Python, GenVM)
+└── index.html                  # standalone frontend (no build step needed)
+```
 
 How to run the frontend
 
