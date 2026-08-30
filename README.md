@@ -14,6 +14,13 @@ custody and released automatically, no manual payout step.
 - **Client:** `0xCa44BB8223A7d15e1B3777Bac319f03f9aEC9D91`
 - **Freelancer:** `0xC62c2478524F5aa098abF9cD7a84ccF1A4897417`
 
+ ## Note on fixed bugs
+
+`An earlier version used gl.eq_principle.prompt_non_comparative, which does not exist in the current GenVM SDK. Fixed using the officially documented gl.vm.run_nondet_unsafe pattern with a custom validator function. Also fixed GEN transfers to use the correct @gl.evm.contract_interface pattern for EOA wallets (gl.get_contract_at is for Intelligent-Contract-to-Intelligent-Contract transfers only).'
+
+Both fixes verified on-chain: contract 0x45a2EA96454d14eAb469fe312bF90763a2B98E5A resolved with status 
+"refunded" and balance dropping to 0.
+
 ## How it works
 
 1. **Deploy** — a job is created with the client address, freelancer address,a natural-language brief, and an agreed escrow amount.
