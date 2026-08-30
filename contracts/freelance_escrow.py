@@ -3,6 +3,14 @@ from genlayer import *
 import json
 
 
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+    class Write:
+        pass
+
+
 class FreelanceEscrow(gl.Contract):
     client: Address
     freelancer: Address
@@ -46,48 +54,45 @@ class FreelanceEscrow(gl.Contract):
         brief = self.brief
         deliverable_url = self.deliverable_url
 
-        def get_input() -> str:
+        def leader_fn():
             page = gl.nondet.web.render(deliverable_url, mode="text")
             content = page[:4000]
             lines = [
+                "You are an impartial freelance-work arbitrator.",
+                "",
                 "BRIEF:",
                 brief,
                 "",
                 "DELIVERABLE CONTENT (fetched from submitted URL):",
                 content,
+                "",
+                "Decide whether the deliverable satisfies the brief. Consider",
+                "partial completion and reasonable scope interpretation, not",
+                "just exact wording matches.",
+                "",
+                "Respond as JSON with exactly these keys:",
+                '{"reasoning": "<short explanation>", "decision": "release|refund|split", "release_percent": <0-100 integer>}',
+                "release: deliverable fully meets the brief, release_percent = 100.",
+                "refund: deliverable does not address the brief at all, release_percent = 0.",
+                "split: partial or incomplete work, release_percent between 1 and 99.",
             ]
-            return chr(10).join(lines)
+            prompt = chr(10).join(lines)
+            return gl.nondet.exec_prompt(prompt, response_format="json")
 
-        task_lines = [
-            "You are an impartial freelance-work arbitrator.",
-            "Based on the BRIEF and DELIVERABLE CONTENT given, decide whether the",
-            "deliverable satisfies the brief. Consider partial completion and",
-            "reasonable scope interpretation, not just exact wording matches.",
-            "Respond using ONLY valid JSON in this exact format, nothing else,",
-            "no markdown fences:",
-            '{"reasoning": "<short explanation>", "decision": "release|refund|split", "release_percent": <0-100 integer>}',
-            "release: deliverable fully meets the brief, release_percent = 100.",
-            "refund: deliverable does not address the brief at all, release_percent = 0.",
-            "split: partial or incomplete work, choose a fair release_percent between 1 and 99.",
-        ]
-        task = chr(10).join(task_lines)
+        def validator_fn(leaders_res) -> bool:
+            if not isinstance(leaders_res, gl.vm.Return):
+                return False
+            my_result = leader_fn()
+            leader_result = leaders_res.calldata
+            # Validators only need to agree on the decision-relevant fields,
+            # not the exact reasoning text (which legitimately varies
+            # between independent LLM calls).
+            return (
+                my_result["decision"] == leader_result["decision"]
+                and int(my_result["release_percent"]) == int(leader_result["release_percent"])
+            )
 
-        criteria_lines = [
-            "The response must be valid JSON with exactly the keys reasoning,",
-            "decision, and release_percent.",
-            "decision must be one of: release, refund, split.",
-            "release_percent must be an integer between 0 and 100.",
-            "release_percent must be logically consistent with decision and with",
-            "how well the deliverable content actually matches the brief.",
-        ]
-        criteria = chr(10).join(criteria_lines)
-
-        result_str = gl.eq_principle.prompt_non_comparative(
-            get_input, task=task, criteria=criteria
-        )
-        fence = chr(96) * 3
-        result_str = result_str.replace(fence + "json", "").replace(fence, "").strip()
-        result = json.loads(result_str)
+        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
 
         decision = result["decision"]
         assert decision in ("release", "refund", "split")
@@ -100,9 +105,9 @@ class FreelanceEscrow(gl.Contract):
         client_share = self.amount - freelancer_share
 
         if freelancer_share > u256(0):
-            gl.get_contract_at(self.freelancer).emit_transfer(value=freelancer_share)
+            _Recipient(self.freelancer).emit_transfer(value=freelancer_share)
         if client_share > u256(0):
-            gl.get_contract_at(self.client).emit_transfer(value=client_share)
+            _Recipient(self.client).emit_transfer(value=client_share)
 
         if pct == 100:
             self.status = "released"
@@ -130,3 +135,4 @@ class FreelanceEscrow(gl.Contract):
     @gl.public.view
     def get_balance(self) -> u256:
         return self.balance
+        
