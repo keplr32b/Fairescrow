@@ -1,12 +1,6 @@
-## FairEscrow — AI-Arbitrated Freelance Escrow
+## FairEscrow - AI-Arbitrated Freelance Escrow
 
-Freelance platforms take weeks to resolve payment disputes, and the person
-resolving them is often just a support agent with no real way to judge
-"is this deliverable actually good." FairEscrow replaces that with GenLayer's
-AI validators: they read the actual submitted work, compare it against the
-original brief, and reach decentralized consensus on a fair outcome —
-release, refund, or a partial split — with real GEN held in on-chain
-custody and released automatically, no manual payout step.
+Freelance platforms take weeks to resolve payment disputes, and the person resolving them is often just a support agent with no real way to judge "is this deliverable actually good." FairEscrow replaces that with GenLayer's AI validators: they read the actual submitted work, compare it against the original brief, and reach decentralized consensus on a fair outcome - release, refund, or a partial split - with real GEN held in on-chain custody and released automatically, no manual payout step.
 
 **Live contract (GenLayer Studio):** `0x45a2EA96454d14eAb469fe312bF90763a2B98E5A`
 
@@ -16,29 +10,26 @@ custody and released automatically, no manual payout step.
 
  ## Note on fixed bugs
 
-```
 An earlier version used gl.eq_principle.prompt_non_comparative, which does not exist in the current GenVM SDK. Fixed using the officially documented gl.vm.run_nondet_unsafe pattern with a custom validator function. Also fixed GEN transfers to use the correct @gl.evm.contract_interface pattern for EOA wallets (gl.get_contract_at is for Intelligent-Contract-to-Intelligent-Contract transfers only).
 
 Both fixes verified on-chain: contract 0x45a2EA96454d14eAb469fe312bF90763a2B98E5A resolved with status "refunded" and balance dropping to 0.
-```
 
 ## How it works
 
-1. **Deploy** — a job is created with the client address, freelancer address,a natural-language brief, and an agreed escrow amount.
+1. **Deploy** - a job is created with the client address, freelancer address,a natural-language brief, and an agreed escrow amount.
 
-2. **Fund** — the client calls fund_escrow() (a payable method) and deposits the exact agreed amount in GEN. The contract now holds that value in custody; nothing moves until resolution.
+2. **Fund** - the client calls fund_escrow() (a payable method) and deposits the exact agreed amount in GEN. The contract now holds that value in custody; nothing moves until resolution.
 
-3. **Submit** — the freelancer submits a public URL to their deliverable.
+3. **Submit** - the freelancer submits a public URL to their deliverable.
 
-4. **Resolve** — either party triggers resolution. Multiple AI validators independently fetch the deliverable's live content, compare it against the brief, and vote. Consensus is reached via GenLayer's gl.vm.run_nondet_unsafe primitive - a custom validator function checks that each validator's independent LLM call agrees on the decision and release percentage, not on identical reasoning text, which is what makes consensus 
-possible for a subjective judgment call.
+4. **Resolve** - either party triggers resolution. Multiple AI validators independently fetch the deliverable's live content, compare it against the brief, and vote. Consensus is reached via GenLayer's gl.vm.run_nondet_unsafe primitive - a custom validator function checks that each validator's independent LLM call agrees on the decision and release percentage, not on identical reasoning text, which is what makes consensus  possible for a subjective judgment call.
 
-5. **Settle** — based on the agreed release_percent, the contract uses the @gl.evm.contract_interface pattern (the 
+5. **Settle** - based on the agreed release_percent, the contract uses the @gl.evm.contract_interface pattern (the 
 correct mechanism for sending GEN to a plain EOA wallet) to actually pay the freelancer and/or refund the client, in the same transaction. The verdict's reasoning is stored on-chain, fully transparent to both parties.
 
 ## Why this needs GenLayer
 
-A traditional smart contract can check "did X wei move from A to B." It cannot check "does this deliverable meet the brief." That requires judgment,live web access, and a way for decentralized validators to agree on something subjective — which is exactly what GenLayer's Intelligent Contracts add on
+A traditional smart contract can check "did X wei move from A to B." It cannot check "does this deliverable meet the brief." That requires judgment,live web access, and a way for decentralized validators to agree on something subjective - which is exactly what GenLayer's Intelligent Contracts add on
 top of a normal EVM-style chain, while still handling the actual value transfer deterministically in code.
 
 ## Project structure Code
@@ -60,9 +51,9 @@ If you're forking this and pointing it at your own deployment, edit the `CONTRAC
 
 ## Known scope limitations (being upfront about this)
 
-- The contract is deployed per job (constructor args set the client, freelancer, brief, and amount at deploy time). There is no on-chain "create job" factory yet — that would be the natural next step for a real multi-job marketplace.
+- The contract is deployed per job (constructor args set the client, freelancer, brief, and amount at deploy time). There is no on-chain "create job" factory yet - that would be the natural next step for a real multi-job marketplace.
 
-- Deliverable content is fetched live at resolution time — if a freelancer edits the page between submission and resolution, that's a known timing edge case. Production version would pin submissions via IPFS/commit hash.
+- Deliverable content is fetched live at resolution time - if a freelancer edits the page between submission and resolution, that's a known timing edge case. Production version would pin submissions via IPFS/commit hash.
 
 ## Testing it end-to-end
 
@@ -78,4 +69,4 @@ If you're forking this and pointing it at your own deployment, edit the `CONTRAC
 
 This was tested with a deliverable that clearly does **not** match the brief (a generic "Hello World" README against a "write a 500-word blog post about AI" brief).
 
-The AI correctly returned a `refund` verdict with accurate reasoning, and the contract transferred the full escrowed amount back to the client — proving both the judgment and the settlement are genuine, not a rubber stamp.
+The AI correctly returned a `refund` verdict with accurate reasoning, and the contract transferred the full escrowed amount back to the client - proving both the judgment and the settlement are genuine, not a rubber stamp.
