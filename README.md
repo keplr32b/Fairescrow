@@ -22,9 +22,11 @@ custody and released automatically, no manual payout step.
 
 3. **Submit** — the freelancer submits a public URL to their deliverable.
 
-4. **Resolve** — either party triggers resolution. Multiple AI validators independently fetch the deliverable's live content, compare it against the brief, and vote. Consensus is reached via GenLayer's prompt_non_comparative equivalence principle — validators agree on the verdict, not on identical wording, which is what makes consensus possible for a subjective judgment call.
+4. **Resolve** — either party triggers resolution. Multiple AI validators independently fetch the deliverable's live content, compare it against the brief, and vote. Consensus is reached via GenLayer's gl.vm.run_nondet_unsafe primitive - a custom validator function checks that each validator's independent LLM call agrees on the decision and release percentage, not on identical reasoning text, which is what makes consensus 
+possible for a subjective judgment call.
 
-5. **Settle** — based on the agreed release_percent, the contract calls gl.get_contract_at(...).emit_transfer(...) to actually pay the freelancer and/or refund the client, in the same transaction. The verdict's reasoning is stored on-chain, fully transparent to both parties.
+5. **Settle** — based on the agreed release_percent, the contract uses the @gl.evm.contract_interface pattern (the 
+correct mechanism for sending GEN to a plain EOA wallet) to actually pay the freelancer and/or refund the client, in the same transaction. The verdict's reasoning is stored on-chain, fully transparent to both parties.
 
 ## Why this needs GenLayer
 
